@@ -21,6 +21,8 @@ library(readr)
 library(here)
 library(echarts4r)
 library(ggplot2)
+library(thematic)
+library(scales)
 ```
 
 ## Data loading
@@ -44,3 +46,63 @@ sg_long_141_countries <- readr::read_csv(here::here('source_data', 'SG long form
 ## Visualisations
 
 Let's begin work on creating some nice visualisations.
+
+### Set up theme/colours
+
+```{r}
+thematic::thematic_on(bg = "#FFFFFF", fg = "black", accent = "#9BBF46")
+```
+
+### Overall trends in happiness
+
+Bump chart - every country
+
+```{r}
+# Inspired by https://www.r-bloggers.com/2018/04/bump-chart/
+unique_countries <- unique(sg_long_2015_2021$Country)
+
+show.top.n <- 10
+
+sg_long_2015_2021 |>
+  ggplot2::ggplot( aes(x = year, y = Rank, group = Country)) +
+  ggplot2::geom_line(aes(color = Country, alpha = 1), size = 2) +
+  ggplot2::geom_point(aes(color = Country, alpha = 1), size = 4) +
+  ggplot2::geom_point(color = "#FFFFFF", size = 1) +
+  ggplot2::scale_y_reverse(breaks = 1:show.top.n) +
+  ggplot2::scale_x_continuous(breaks = 2015:2021, minor_breaks = 2015:2021, expand = c(.25, .25)) +
+  ggplot2::coord_cartesian(ylim = c(1,show.top.n)) + 
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::labs(x = "Year",
+       y = "Ranking",
+       title = "World Happiness Report Rankings",
+       subtitle = "There was little change in the top 10 countries between 2015 and 2021.") +
+  ggplot2::geom_text(data = sg_long_2015_2021 %>% dplyr::filter(year == 2015),
+            aes(label = Country, x = 2014.5) , hjust = .85, fontface = "bold", color = "#888888", size = 4) +
+  ggplot2::geom_text(data = sg_long_2015_2021 %>% dplyr::filter(year == 2021),
+            aes(label = Country, x = 2021.5) , hjust = 0.15, fontface = "bold", color = "#888888", size = 4)
+```
+
+### Box plots by year
+
+#### 2015
+
+```{r}
+sg_long_2015_2021 |>
+  dplyr::filter(year == 2015) |>
+  ggplot2::ggplot( aes(x= reorder(Region, Score, FUN = median), y=Score, fill=Region)) + 
+    ggplot2::geom_boxplot() +
+    ggplot2::xlab("Region") +
+    ggplot2::theme(legend.position="none") +
+    ggplot2::xlab("") +
+    ggplot2::xlab("") +
+    ggplot2::ggtitle("Score by Region, 2015", subtitle="Sub-Sarahan Africa had the lowest median happiness.") +
+    ggplot2::scale_x_discrete(labels = scales::label_wrap(20)) +
+    ggplot2::coord_flip()
+```
+
+### Overall trends
+
+```{r}
+sg_long_2015_2021 |>
+ggplot2::ggplot( aes(x = year, y = Score, colour = Region)) + geom_smooth()
+```

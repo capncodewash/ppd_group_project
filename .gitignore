@@ -6,3 +6,8 @@
 
 # Ignore all source data - this needs to be dropped in manually to ensure we're not getting out of sync.
 source_data/*.*
+
+# Ignore RMarkdown output
+
+*.html
+*_files/*
