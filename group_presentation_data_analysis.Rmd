@@ -23,6 +23,7 @@ library(echarts4r)
 library(ggplot2)
 library(thematic)
 library(scales)
+library(ggpubr)
 ```
 
 ## Data loading
@@ -43,6 +44,16 @@ Bring in the '141 countries' long dataset:
 sg_long_141_countries <- readr::read_csv(here::here('source_data', 'SG long format 141 countries.csv'))
 ```
 
+Bring in the augmented datasets (including 2020 data):
+
+```{r}
+long_format_158_countries <- readxl::read_excel("source_data/SG long format.xlsx", 
+    sheet = "n = up to 158")
+
+long_format_141_countries <- readxl::read_excel("source_data/SG long format.xlsx", 
+    sheet = "n = 141")
+```
+
 ## Visualisations
 
 Let's begin work on creating some nice visualisations.
@@ -59,11 +70,11 @@ Bump chart - every country
 
 ```{r}
 # Inspired by https://www.r-bloggers.com/2018/04/bump-chart/
-unique_countries <- unique(sg_long_2015_2021$Country)
+unique_countries <- unique(long_format_141_countries$Country)
 
 show.top.n <- 10
 
-sg_long_2015_2021 |>
+long_format_141_countries |>
   ggplot2::ggplot( aes(x = year, y = Rank, group = Country)) +
   ggplot2::geom_line(aes(color = Country, alpha = 1), size = 2) +
   ggplot2::geom_point(aes(color = Country, alpha = 1), size = 4) +
@@ -76,9 +87,9 @@ sg_long_2015_2021 |>
        y = "Ranking",
        title = "World Happiness Report Rankings",
        subtitle = "There was little change in the top 10 countries between 2015 and 2021.") +
-  ggplot2::geom_text(data = sg_long_2015_2021 %>% dplyr::filter(year == 2015),
+  ggplot2::geom_text(data = long_format_141_countries %>% dplyr::filter(year == 2015),
             aes(label = Country, x = 2014.5) , hjust = .85, fontface = "bold", color = "#888888", size = 4) +
-  ggplot2::geom_text(data = sg_long_2015_2021 %>% dplyr::filter(year == 2021),
+  ggplot2::geom_text(data = long_format_141_countries %>% dplyr::filter(year == 2021),
             aes(label = Country, x = 2021.5) , hjust = 0.15, fontface = "bold", color = "#888888", size = 4)
 ```
 
@@ -87,7 +98,7 @@ sg_long_2015_2021 |>
 #### 2015
 
 ```{r}
-sg_long_2015_2021 |>
+long_format_141_countries |>
   dplyr::filter(year == 2015) |>
   ggplot2::ggplot( aes(x= reorder(Region, Score, FUN = median), y=Score, fill=Region)) + 
     ggplot2::geom_boxplot() +
@@ -103,6 +114,55 @@ sg_long_2015_2021 |>
 ### Overall trends
 
 ```{r}
-sg_long_2015_2021 |>
+long_format_141_countries |>
 ggplot2::ggplot( aes(x = year, y = Score, colour = Region)) + geom_smooth()
+```
+
+### Gini index correlation
+
+```{r}
+gini_data <- readr::read_csv(here::here('source_data', 'API_SI.POV.GINI_DS2_en_csv_v2_5181705.csv'), skip = 3)
+
+# Pivot it to 'longer' by transforming the year column names into rows
+gini_data_long <- gini_data |>
+  tidyr::pivot_longer(cols = matches('\\d\\d\\d\\d'), names_to = "year", values_to = "gini") |>
+  dplyr::rename("Country" = "Country Name")
+
+# Convert the 'year' column in the gini data to numeric, to be compatible with the main dataset.
+gini_data_long$year = as.numeric(gini_data_long$year)
+
+long_format_141_countries_with_gini <- long_format_141_countries |>
+  dplyr::left_join(gini_data_long, by=c("Country" = "Country", "year"= "year"))
+
+# Remove entries with no gini
+long_format_141_countries_with_gini <- long_format_141_countries_with_gini |> tidyr::drop_na(gini)
+
+# This drops us down to 347 observations:
+table(long_format_141_countries_with_gini$year)
+# 2015, 2016, and 2018 have useful numbers of countries though.
+```
+
+Is there an overall correlation?
+
+```{r}
+
+long_format_141_countries_with_gini |>
+  ggplot2::ggplot(mapping = aes(x = gini, y = Score, color = Region)) +
+  ggplot2::geom_point() +
+  ggplot2::ggtitle("Correlation of Gini index and happiness score (all years)") +
+  ggplot2::xlab("Gini index value") +
+  ggplot2::ylab("Happiness score")
+```
+
+Look at a single year instead, dropping the regions too. Generate a Pearson's R value.
+
+```{r}
+long_format_141_countries_with_gini |>
+  dplyr::filter(year == 2018) |>
+  ggplot2::ggplot(mapping = aes(x = gini, y = Score)) +
+  ggplot2::geom_point() +
+  ggplot2::ggtitle("Correlation of Gini index and happiness score (2018)", subtitle="There is no overall correlation.") +
+  ggplot2::xlab("Gini index value") +
+  ggplot2::ylab("Happiness score") +
+  ggpubr::stat_cor(method = "pearson", label.x = 20, label.y = 8)
 ```
