@@ -9,62 +9,38 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Data loading
+## Package loading
 
-```{r}
+We will need a variety of packages to load/wrangle the data, and to create visualisations. Let's load them now.
+
+```{r load_packages}
 library(readxl)
 library(dplyr)
 library(tidyr)
 library(readr)
 library(here)
 library(echarts4r)
-
-# Bring in the CSV data for earlier years
-data_2015 <- readr::read_csv(here::here("source_data", "2015.csv"))
-data_2016 <- readr::read_csv(here::here("source_data", "2016.csv"))
-data_2017 <- readr::read_csv(here::here("source_data", "2017.csv"))
-data_2018 <- readr::read_csv(here::here("source_data", "2018.csv"), na = c("", "N/A"))
-
-# Bring in the Excel data for later years
-data_2019 <- readxl::read_xlsx(here::here("source_data", "2019.xlsx"))
-data_2021 <- readxl::read_xlsx(here::here("source_data", "2021.xlsx"))
+library(ggplot2)
 ```
 
-Merge the data together, in a quick-and-dirty way, to figure out what will come in cleanly:
+## Data loading
+
+Bring in the 'long' dataset:
 
 ```{r}
-data_2015 <- data_2015 |> dplyr::mutate(
-  year = 2015
-)
+# Bring in the 'long' cleaned dataset
 
-data_2016 <- data_2016 |> dplyr::mutate(
-  year = 2016
-)
-
-data_2017 <- data_2017 |> dplyr::mutate(
-  year = 2017
-)
-
-data_2018 <- data_2018 |> dplyr::mutate(
-  year = 2018
-)
-
-
-data_2019 <- data_2019 |> dplyr::mutate(
-  year = 2019
-)
-
-data_2021 <- data_2021 |> dplyr::mutate(
-  year = 2021
-)
-
-data_joined <-
-  dplyr::bind_rows(
-    data_2015,
-    data_2016,
-    data_2017,
-    data_2018,
-    data_2019,
-    data_2021
-  )
+sg_long_2015_2021 <- readr::read_csv(here::here('source_data', 'SG Long format 2015 to 2021.csv'))
 ```
+
+Bring in the '141 countries' long dataset:
+
+```{r}
+# Bring in the 'long' cleaned dataset
+
+sg_long_141_countries <- readr::read_csv(here::here('source_data', 'SG long format 141 countries.csv'))
+```
+
+## Visualisations
+
+Let's begin work on creating some nice visualisations.
